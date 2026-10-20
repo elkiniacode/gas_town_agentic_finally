@@ -1,0 +1,44 @@
+# Environment (R34/R35) — .env.example is committed, .env never is
+.env
+.env.local
+.env.*.local
+
+# Runtime SQLite database (db/ itself is kept via db/.gitkeep)
+db/*.db
+db/*.db-journal
+db/*.db-wal
+db/*.db-shm
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Frontend export copied into the backend for serving
+backend/static/
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Gas Town agent runtime
+.runtime/
