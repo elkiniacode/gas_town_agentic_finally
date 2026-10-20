@@ -14,6 +14,19 @@ from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 
+
+class BadRequest(Exception):
+    """A business-rule failure, rendered as ``400 {"detail": <message>}``.
+
+    Raised by the service layer (``app.services``) so the exact contract
+    strings reach both the REST routes and the chat action results.
+    """
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(detail)
+        self.detail = detail
+
+
 _LOCATION_KINDS = {"body", "query", "path", "header", "cookie"}
 
 
@@ -41,6 +54,10 @@ async def _request_validation_handler(_: Request, exc: RequestValidationError) -
     return JSONResponse(status_code=400, content={"detail": validation_detail(exc)})
 
 
+async def _bad_request_handler(_: Request, exc: BadRequest) -> JSONResponse:
+    return JSONResponse(status_code=400, content={"detail": exc.detail})
+
+
 async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.exception("Unhandled error on %s %s", request.method, request.url.path, exc_info=exc)
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
@@ -48,4 +65,5 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSON
 
 def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(RequestValidationError, _request_validation_handler)
+    app.add_exception_handler(BadRequest, _bad_request_handler)
     app.add_exception_handler(Exception, _unhandled_exception_handler)

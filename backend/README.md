@@ -22,7 +22,8 @@ app/
 ├── timeutil.py      # ISO-8601 UTC timestamps with ms + "Z"
 ├── deps.py          # FastAPI dependencies (get_db, get_settings, get_price_cache, ...)
 ├── market/          # PriceCache, MarketDataSource, GBM simulator, tracked-set helpers
-├── routers/         # health, market (SSE) + portfolio, watchlist, chat stubs
+├── routers/         # health, market (SSE), portfolio, watchlist + chat stub
+├── services/        # watchlist + portfolio/trade logic shared by routes and chat
 └── storage/         # schema.sql, seed data, init_database(), Database helper
 tests/               # pytest; conftest.py provides a temp-DB app/client
 ```
@@ -58,3 +59,21 @@ The lifespan builds `app.state.price_cache` (a `PriceCache`) and starts `app.sta
   `app/market/simulator.py` (R15).
 - An open SSE connection keeps uvicorn's graceful shutdown waiting; run the server with
   `--timeout-graceful-shutdown 2` (the Docker CMD should) so `docker stop` is prompt.
+
+### Watchlist and portfolio services
+
+`app.services` holds the logic behind `/api/watchlist` and `/api/portfolio*`; the chat bead calls
+it directly (not over HTTP) so both paths share validation, error strings and the trade lock.
+
+- `get_watchlist(db, cache)`, `add_to_watchlist(db, source, ticker)`,
+  `remove_from_watchlist(db, source, ticker)` — idempotent; they normalize the ticker, re-sync the
+  priced set and return the normalized ticker.
+- `await execute_trade(db, cache, source, lock, ticker, quantity, side)` → `ExecutedTrade`
+  (`.to_wire()` is the contract's `trade` object). Runs under the trade lock (R20) in one
+  transaction, then re-syncs pricing and records a snapshot.
+- `get_portfolio(db, cache)` → the `GET /api/portfolio` body; `load_portfolio` returns the
+  unrounded `Portfolio` (e.g. for LLM context).
+- Failures raise `app.errors.BadRequest` with `.detail` set to the exact contract string (the app
+  renders it as `400 {"detail": ...}`). Trade failures are `TradeError`, whose `.price` is the
+  cached price when the ticker had one — what a failed chat trade reports.
+- The lifespan runs `run_snapshot_loop` (every 30 s) after starting the market source.

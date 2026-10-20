@@ -22,6 +22,8 @@ from app.market import (
     load_tracked_tickers,
 )
 from app.routers import chat, health, market, portfolio, watchlist
+from app.services import run_snapshot_loop
+from app.services.portfolio import stop_task
 from app.storage import init_database
 
 logger = logging.getLogger(__name__)
@@ -64,11 +66,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await source.start()
         logger.info("Market data source %s started", type(source).__name__)
 
-        # Portfolio snapshots: start the 30 s snapshot task after the source.
+        # Portfolio snapshots every 30 s, started after the source.
+        snapshot_task = asyncio.create_task(
+            run_snapshot_loop(app.state.db, app.state.price_cache, app.state.trade_lock),
+            name="portfolio-snapshots",
+        )
         try:
             yield
         finally:
-            # Stop background tasks here, in reverse start order.
+            # Stop background tasks in reverse start order.
+            await stop_task(snapshot_task)
             await source.stop()
 
     app = FastAPI(title="FinAlly", version="0.1.0", lifespan=lifespan)
