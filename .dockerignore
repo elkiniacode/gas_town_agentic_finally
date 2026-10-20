@@ -1,0 +1,41 @@
+# Secrets never enter the build context (R34). Covers frontend/.env.local too,
+# which would otherwise bake a dev NEXT_PUBLIC_API_BASE into the export.
+**/.env
+**/.env.*
+
+# Runtime data: /app/db is the volume's (R33)
+db/
+
+# Build output and dependencies are rebuilt inside the image
+**/node_modules
+**/.next
+**/out
+**/.venv
+**/__pycache__
+**/*.py[cod]
+**/*.tsbuildinfo
+**/next-env.d.ts
+backend/static/
+
+# Not needed at runtime
+.git
+.gitignore
+.beads
+.runtime
+.claude
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/.coverage
+**/htmlcov
+backend/tests/
+test/
+test-results/
+playwright-report/
+blob-report/
+scripts/
+planning/
+*.md
+Dockerfile
+.dockerignore
+.DS_Store

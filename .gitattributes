@@ -1,0 +1,4 @@
+# The start/stop scripts must keep LF endings even on Windows checkouts
+# (they also run under WSL and Git Bash).
+*.sh text eol=lf
+Dockerfile text eol=lf
