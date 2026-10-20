@@ -15,6 +15,12 @@ from starlette.types import Scope
 
 from app.config import DEV_CORS_ORIGINS, Settings, load_settings
 from app.errors import register_error_handlers
+from app.market import (
+    PriceCache,
+    create_market_source,
+    load_restart_prices,
+    load_tracked_tickers,
+)
 from app.routers import chat, health, market, portfolio, watchlist
 from app.storage import init_database
 
@@ -46,14 +52,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.trade_lock = asyncio.Lock()
         logger.info("Database ready at %s", settings.db_path)
 
-        # Market data (fin-k90.3): build the tracked set (watchlist ∪ positions),
-        # seed held tickers from their last trade price (R14), start the source.
+        # Market data: build the tracked set (watchlist ∪ positions), seed held
+        # tickers from their last trade price (R14), start the source.
+        app.state.price_cache = PriceCache()
+        source = create_market_source(
+            settings, app.state.price_cache, seed_prices=load_restart_prices(app.state.db)
+        )
+        for ticker in load_tracked_tickers(app.state.db):
+            source.add_ticker(ticker)
+        app.state.market_source = source
+        await source.start()
+        logger.info("Market data source %s started", type(source).__name__)
+
         # Portfolio snapshots: start the 30 s snapshot task after the source.
         try:
             yield
         finally:
             # Stop background tasks here, in reverse start order.
-            pass
+            await source.stop()
 
     app = FastAPI(title="FinAlly", version="0.1.0", lifespan=lifespan)
     register_error_handlers(app)
