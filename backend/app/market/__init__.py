@@ -1,18 +1,17 @@
-"""Market data: the shared price cache, the source interface and the simulator (PLAN.md §6)."""
+"""Market data: price cache, source interface, simulator and Massive client (PLAN.md §6)."""
 
-import logging
 from collections.abc import Mapping
 
 from app.config import Settings
 from app.market.cache import PriceCache, PriceEntry
+from app.market.massive import MassiveSource
 from app.market.simulator import SimulatorSource
 from app.market.source import MarketDataSource
 from app.market.tracking import load_restart_prices, load_tracked_tickers, sync_ticker
 
-logger = logging.getLogger(__name__)
-
 __all__ = [
     "MarketDataSource",
+    "MassiveSource",
     "PriceCache",
     "PriceEntry",
     "SimulatorSource",
@@ -28,11 +27,11 @@ def create_market_source(
 ) -> MarketDataSource:
     """Pick the source from ``MASSIVE_API_KEY`` (PLAN.md §5).
 
-    The Massive client is a stretch goal (fin-k90.11); until it lands, a
-    configured key falls back to the simulator with a warning.
+    ``seed_prices`` (restart continuity, R14) only apply to the simulator:
+    Massive serves real prices, so held tickers wait for the first poll.
     """
-    if settings.use_massive:
-        logger.warning(
-            "MASSIVE_API_KEY is set but the Massive client is not built yet; using the simulator"
+    if settings.massive_api_key is not None:
+        return MassiveSource(
+            cache, settings.massive_api_key, poll_seconds=settings.massive_poll_seconds
         )
     return SimulatorSource(cache, seed_prices=seed_prices)

@@ -14,6 +14,7 @@ from app.config import Settings
 from app.main import create_app
 from app.market import (
     MarketDataSource,
+    MassiveSource,
     PriceCache,
     SimulatorSource,
     create_market_source,
@@ -356,9 +357,12 @@ def test_bad_tick_does_not_kill_the_loop(monkeypatch: pytest.MonkeyPatch) -> Non
     assert calls > 2
 
 
-def test_massive_key_falls_back_to_simulator(settings: Settings) -> None:
-    source = create_market_source(replace(settings, massive_api_key="k"), PriceCache())
-    assert isinstance(source, SimulatorSource)
+def test_massive_key_selects_massive_source(settings: Settings) -> None:
+    source = create_market_source(
+        replace(settings, massive_api_key="k", massive_poll_seconds=5.0), PriceCache()
+    )
+    assert isinstance(source, MassiveSource)
+    assert source.poll_seconds == 5.0
     assert isinstance(create_market_source(settings, PriceCache()), SimulatorSource)
 
 

@@ -45,12 +45,13 @@ Use `app.timeutil.utc_now_iso()` for every stored timestamp and `app.storage.new
 ### Market data
 
 The lifespan builds `app.state.price_cache` (a `PriceCache`) and starts `app.state.market_source`
-(the simulator; Massive is a stretch goal). Inject them with `Depends(get_price_cache)` /
+(the simulator, or `MassiveSource` when `MASSIVE_API_KEY` is set). Inject them with `Depends(get_price_cache)` /
 `Depends(get_market_source)`.
 
 - Read prices with `cache.get("AAPL")` → `PriceEntry | None` (`price`, `previous_price`,
-  `open_price`, `timestamp`). Simulator prices are already rounded to 2 dp, so the cached price is
-  the fill price.
+  `open_price`, `timestamp`). Both sources write prices rounded to 2 dp, so the cached price is
+  the fill price. With Massive a ticker may have no entry (invalid symbol, or added since the
+  last poll).
 - After committing **any** watchlist add/remove or trade, call
   `app.market.sync_ticker(db, source, ticker)`. It prices the ticker iff it is on the watchlist or
   held (R9): a newly added ticker is priced immediately; a held ticker removed from the watchlist

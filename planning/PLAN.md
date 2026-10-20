@@ -259,6 +259,7 @@ Built **last**, after everything else works. The interface above is kept so it s
 - One multi-ticker snapshot call per poll for the whole tracked set
 - `open_price` = previous close from the snapshot response
 - **Unverified tier limits (R16)**: Polygon's free tier historically provided end-of-day data only, and the snapshot endpoint may require a paid tier. The Massive agent must confirm this before building. If data is EOD-only or the market is closed, prices simply don't change between polls; SSE keeps sending the (unchanged) cache — that is acceptable behavior, not an error.
+  - **Resolved (fin-k90.11, see `planning/MASSIVE_FREE_TIER.md`)**: the snapshot endpoint is **not** on the free Stocks Basic plan (it returns `403 NOT_AUTHORIZED`), and Basic data is end-of-day only. On that 403 the client falls back, for the rest of the process, to the grouped daily bars endpoint (all tickers' end-of-day bars for one date in one call): price = latest close, `open_price` = the previous trading day's close. Paid plans (Starter and up) use the snapshot as designed (15-min delayed, or real time on Advanced).
 - **Invalid symbols (R12)**: a symbol absent from the snapshot response stays on the watchlist with no price (`price: null`, UI shows "—"); trades on it get `400 "No price available for XYZ"`. It is not auto-removed.
 - `add_ticker` cannot price immediately with Massive; the ticker gets a price on the next poll.
 - Tests run against recorded JSON responses, never the live API.
