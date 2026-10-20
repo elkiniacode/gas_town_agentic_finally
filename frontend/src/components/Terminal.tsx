@@ -75,10 +75,14 @@ export function Terminal() {
             className={`${panelSize} lg:flex-[3]`}
           />
           <div className="grid gap-2 lg:min-h-0 lg:flex-[2] lg:grid-cols-2">
-            <PortfolioHeatmap positions={live?.positions ?? []} className={panelSize} />
+            <PortfolioHeatmap positions={live?.positions ?? []} onSelect={selectTicker} className={panelSize} />
             <PnlChart snapshots={snapshots} liveTotal={live?.total_value ?? null} className={panelSize} />
           </div>
-          <PositionsTable positions={live?.positions ?? []} className={`${panelSize} lg:flex-[2]`} />
+          <PositionsTable
+            positions={live?.positions ?? []}
+            onSelect={selectTicker}
+            className={`${panelSize} lg:flex-[2]`}
+          />
           <TradeBar selection={selection} onTraded={refresh} />
         </main>
 
