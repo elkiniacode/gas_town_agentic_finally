@@ -29,6 +29,7 @@ function mockApi() {
   vi.spyOn(api, "getPortfolioHistory").mockResolvedValue({
     snapshots: [{ total_value: 10000, recorded_at: "2026-10-18T14:00:00.000Z" }],
   });
+  vi.spyOn(api, "getChatHistory").mockResolvedValue({ messages: [] });
 }
 
 function renderTerminal() {
@@ -73,6 +74,25 @@ describe("Terminal layout", () => {
     await userEvent.click(screen.getByTestId("watchlist-row-GOOGL"));
     expect(screen.getByLabelText("Trade ticker")).toHaveValue("GOOGL");
     expect(screen.getByTestId("main-chart")).toHaveTextContent("GOOGL");
+  });
+
+  it("refetches portfolio, watchlist and history after a chat reply with actions (R29)", async () => {
+    vi.spyOn(api, "sendChat").mockResolvedValue({
+      message: "Mock response: placing a buy order for 1 AAPL.",
+      actions: {
+        watchlist_changes: [],
+        trades: [{ ticker: "AAPL", side: "buy", quantity: 1, price: 100, status: "ok", error: null }],
+      },
+    });
+    renderTerminal();
+    await screen.findByTestId("chat-empty");
+    expect(api.getPortfolio).toHaveBeenCalledTimes(1);
+    await userEvent.type(screen.getByTestId("chat-input"), "buy");
+    await userEvent.click(screen.getByTestId("chat-send"));
+    expect(await screen.findByTestId("chat-action")).toHaveAttribute("data-status", "ok");
+    for (const fn of [api.getPortfolio, api.getWatchlist, api.getPortfolioHistory]) {
+      expect(fn).toHaveBeenCalledTimes(2);
+    }
   });
 
   it("collapses and expands the chat sidebar", async () => {
