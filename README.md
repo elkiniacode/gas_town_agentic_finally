@@ -86,4 +86,23 @@ npm test
 npm run lint && npm run typecheck
 ```
 
-End-to-end tests (Playwright) live in [`test/`](test/).
+### End-to-end tests
+
+The Playwright suite in [`test/`](test/) runs in Docker and needs nothing else installed:
+
+```bash
+test/run_e2e.sh                       # build the image, run every scenario, tear down
+test/run_e2e.sh e2e/chat.spec.ts      # extra arguments go to `playwright test`
+```
+
+[`test/docker-compose.test.yml`](test/docker-compose.test.yml) starts two app containers from the production image, both with `LLM_MOCK=true` and a throwaway tmpfs database, plus a Playwright container that runs the tests. Nothing is published to the host, so it doesn't conflict with a running `finally` container. One app instance is never written to, and the fresh-start test ($10k cash, default watchlist) runs against it. Every other test measures changes from its own starting point, so the tests can run in any order. On failure, traces and screenshots land in `test/test-results/` and an HTML report in `test/playwright-report/`.
+
+To run against an app you started yourself, for example with `LLM_MOCK=true` in `.env`:
+
+```bash
+cd test
+npm install && npx playwright install chromium
+BASE_URL=http://localhost:8000 npx playwright test
+```
+
+Outside Docker both test targets default to `BASE_URL`, so fresh-start only passes against a freshly started app. Point `FRESH_BASE_URL` at a second, untouched instance to avoid that.
